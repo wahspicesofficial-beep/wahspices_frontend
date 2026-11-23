@@ -1,0 +1,20 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment (real values stay on your machine / hosting panel; see .env.example)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS / tools
+.vscode/
+.idea/
+.DS_Store
+.claude/

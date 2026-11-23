@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO Meta Tags -->
+    <title>Wah Spices - Pehle bite mein WAH! | Indian Spices Online</title>
+    <meta
+      name="description"
+      content="Buy authentic Indian spices and masala online. Wah Spices brings you the finest quality spices sourced from the best spice growing regions of India. 100% natural, no preservatives."
+    />
+    <meta
+      name="keywords"
+      content="Indian spices, masala online, garam masala, chai masala, biryani masala, Wah Spices, buy spices online, authentic Indian spices, premium masala, organic spices India"
+    />
+    <meta name="author" content="Wah Spices" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://wahspices.in/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Wah Spices - Authentic Indian Spices" />
+    <meta
+      property="og:description"
+      content="Experience the authentic taste of India with Wah Spices. 25+ varieties sourced from the best spice growing regions."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wahspices.in/" />
+    <meta property="og:image" content="https://wahspices.in/og-image.jpg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Wah Spices - Authentic Indian Spices" />
+    <meta
+      name="twitter:description"
+      content="Buy authentic Indian spices online. 25+ premium masala varieties."
+    />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "OnlineStore",
+        "name": "WAH! Premium Masala",
+        "description": "Authentic Indian spices and masala online store",
+        "url": "https://wahspices.in",
+        "logo": "https://wahspices.in/logo.png",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-800-XXX-XXXX",
+          "contactType": "customer service"
+        }
+      }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Page loader — hidden by main.jsx once React mounts -->
+    <div id="page-loader">
+      <div id="page-loader-spinner"></div>
+    </div>
+
+    <style>
+      #page-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #fff9f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+      }
+      #page-loader.hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+      #page-loader-logo {
+        height: 140px;
+        width: auto;
+        object-fit: contain;
+      }
+      #page-loader-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #f5e8d0;
+        border-top-color: #1a5c2e;
+        border-radius: 50%;
+        animation: loader-spin 0.8s linear infinite;
+      }
+      @keyframes loader-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

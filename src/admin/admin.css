@@ -1,0 +1,315 @@
+/* ============================================================================
+   WAH! Spices — Admin design system
+   Layout follows the Axion Options client (compact scale, Poppins — same font as the website,
+   inset content window, Finder-style sidebar, bordered cards, data grids),
+   coloured with the WAH brand palette (green primary, orange accent, cream).
+
+   EVERYTHING here is scoped under `.admin-ui`, which only the admin layout and
+   admin login render — the customer website is not affected.
+   ========================================================================== */
+
+.admin-ui {
+  /* ── Tokens ── */
+  --backdrop: #ece6d8;
+  --background: #f8f5ee;
+  --surface: #fffdf8;
+  --surface-secondary: #f4efe3;
+  --surface-elevated: #ffffff;
+  --surface-hover: #efe8da;
+  --selection: rgba(26, 92, 46, 0.09);
+  --border: #e3dbc9;
+  --border-strong: #cdc2ab;
+
+  --text-primary: #1d2a20;
+  --text-secondary: #46504a;
+  --text-muted: #6d736b;
+
+  --primary: #1a5c2e;          /* brand green */
+  --primary-hover: #0f3d1e;    /* brand green dark */
+  --primary-soft: rgba(26, 92, 46, 0.1);
+  --accent: #f5a623;           /* brand orange */
+  --accent-strong: #c97d06;
+  --accent-soft: rgba(245, 166, 35, 0.14);
+
+  --success: #1f7a50;  --success-bg: rgba(31, 122, 80, 0.09);
+  --danger: #b0382f;   --danger-bg: rgba(176, 56, 47, 0.09);
+  --warning: #b4530f;  --warning-bg: rgba(180, 83, 15, 0.09);
+  --info: #1e5fa8;     --info-bg: rgba(30, 95, 168, 0.08);
+
+  --radius-control: 4px;
+  --radius-button: 6px;
+  --radius-card: 8px;
+  --radius-dialog: 10px;
+  --window-shadow: 0 0 0 1px rgba(60, 45, 20, 0.06), 0 8px 28px rgba(60, 45, 20, 0.12);
+
+  /* ── Base type: Poppins — the same font as the customer website (loaded in index.html) ── */
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  text-rendering: optimizeLegibility;
+}
+
+/* Every admin font utility resolves to the admin serif */
+.admin-ui .font-body,
+.admin-ui .font-heading,
+.admin-ui .font-sans,
+.admin-ui .font-serif,
+.admin-ui button,
+.admin-ui input,
+.admin-ui select,
+.admin-ui textarea {
+  font-family: inherit;
+}
+.admin-ui .font-mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+/* Poppins is loaded at 300–700. Bold UI text reads better at 600 in a dense admin; titles stay 700. */
+.admin-ui .font-medium { font-weight: 500; }
+.admin-ui .font-semibold,
+.admin-ui .font-bold { font-weight: 600; }
+.admin-ui .font-extrabold,
+.admin-ui .font-black,
+.admin-ui h1,
+.admin-ui h1[class] { font-weight: 700; }
+
+.admin-ui .tabular-nums,
+.admin-ui td { font-variant-numeric: tabular-nums; }
+
+/* ── Type scale (compact, like the options client) ── */
+.admin-ui .text-\[9px\],
+.admin-ui .text-\[10px\] { font-size: 11px; }
+.admin-ui .text-xs  { font-size: 12px; line-height: 1.4; }
+.admin-ui .text-sm  { font-size: 13px; line-height: 1.45; }
+.admin-ui .text-base{ font-size: 14px; }
+.admin-ui .text-lg  { font-size: 16px; line-height: 1.35; }
+.admin-ui .text-xl  { font-size: 18px; line-height: 1.3; }
+.admin-ui .text-2xl { font-size: 22px; line-height: 1.25; }
+.admin-ui .text-3xl { font-size: 26px; line-height: 1.2; }
+.admin-ui .text-4xl { font-size: 30px; line-height: 1.15; }
+
+/* ── Neutral palette → warm tokens ── */
+.admin-ui .text-gray-900,
+.admin-ui .text-gray-800 { color: var(--text-primary); }
+.admin-ui .text-gray-700,
+.admin-ui .text-gray-600 { color: var(--text-secondary); }
+.admin-ui .text-gray-500,
+.admin-ui .text-gray-400 { color: var(--text-muted); }
+.admin-ui .text-gray-300 { color: #a8a596; }
+
+.admin-ui .bg-white { background-color: var(--surface); }
+.admin-ui .bg-gray-50 { background-color: var(--surface-secondary); }
+.admin-ui .bg-gray-100 { background-color: var(--surface-hover); }
+.admin-ui .hover\:bg-gray-50:hover,
+.admin-ui .hover\:bg-gray-50\/50:hover { background-color: var(--surface-hover); }
+.admin-ui .hover\:bg-gray-100:hover,
+.admin-ui .hover\:bg-gray-200:hover { background-color: var(--surface-hover); }
+
+/* Default border colour (zero specificity, so coloured border utilities still win) */
+:where(.admin-ui) *,
+:where(.admin-ui) *::before,
+:where(.admin-ui) *::after { border-color: var(--border); }
+.admin-ui .border-gray-50,
+.admin-ui .border-gray-100,
+.admin-ui .border-gray-200 { border-color: var(--border); }
+.admin-ui .border-gray-300 { border-color: var(--border-strong); }
+.admin-ui .divide-gray-50 > * + *,
+.admin-ui .divide-gray-100 > * + * { border-color: var(--border); }
+
+/* ── Shape: cards 8px, controls 6px, dialogs 10px — no soft drop shadows ── */
+.admin-ui .rounded-3xl,
+.admin-ui .rounded-2xl { border-radius: var(--radius-card); }
+.admin-ui .rounded-xl { border-radius: var(--radius-button); }
+.admin-ui .rounded-lg { border-radius: 5px; }
+.admin-ui .shadow-card,
+.admin-ui .shadow-sm,
+.admin-ui .shadow,
+.admin-ui .shadow-md,
+.admin-ui .shadow-lg {
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+.admin-ui .shadow-card-hover,
+.admin-ui .hover\:shadow-card-hover:hover { box-shadow: 0 4px 14px rgba(60, 45, 20, 0.08); }
+.admin-ui .shadow-xl,
+.admin-ui .shadow-2xl {
+  box-shadow: 0 0 0 1px rgba(60, 45, 20, 0.08), 0 18px 48px rgba(30, 22, 10, 0.22);
+}
+/* Small chips / pills that only used a shadow for depth shouldn't gain a border */
+.admin-ui .rounded-full.shadow,
+.admin-ui .rounded-full.shadow-sm,
+.admin-ui .rounded-full.shadow-md { border: 0; }
+
+/* Main page headings: 22px bold, like the options client page title */
+.admin-ui h1 { letter-spacing: -0.01em; }
+
+/* ── Buttons ── */
+.admin-ui .btn-primary,
+.admin-ui .btn-secondary,
+.admin-ui .btn-outline,
+.admin-ui .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-button);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: none;
+  transform: none !important;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.admin-ui .btn-primary { background: var(--primary); color: #fff; border: 1px solid var(--primary); }
+.admin-ui .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.admin-ui .btn-secondary { background: var(--accent); color: #2b1a00; border: 1px solid var(--accent); }
+.admin-ui .btn-secondary:hover { background: var(--accent-strong); color: #fff; }
+.admin-ui .btn-outline { background: var(--surface-elevated); color: var(--text-primary); border: 1px solid var(--border); }
+.admin-ui .btn-outline:hover { background: var(--surface-hover); color: var(--text-primary); }
+.admin-ui .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid transparent; }
+.admin-ui .btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+.admin-ui .btn-primary:disabled,
+.admin-ui .btn-secondary:disabled,
+.admin-ui .btn-outline:disabled { opacity: 0.55; cursor: not-allowed; }
+.admin-ui .btn-primary:focus-visible,
+.admin-ui .btn-outline:focus-visible { outline: 2px solid rgba(26, 92, 46, 0.4); outline-offset: 1px; }
+
+/* ── Form controls ── */
+.admin-ui .input-field,
+.admin-ui input[type='text'],
+.admin-ui input[type='email'],
+.admin-ui input[type='password'],
+.admin-ui input[type='number'],
+.admin-ui input[type='search'],
+.admin-ui input[type='tel'],
+.admin-ui input[type='date'],
+.admin-ui input[type='month'],
+.admin-ui input[type='time'],
+.admin-ui input[type='url'],
+.admin-ui select,
+.admin-ui textarea {
+  border-radius: var(--radius-button);
+  border-color: var(--border);
+  background-color: var(--surface-elevated);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.admin-ui .input-field {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+}
+.admin-ui textarea.input-field { height: auto; padding: 8px 10px; line-height: 1.45; }
+.admin-ui select.input-field { padding-right: 28px; }
+.admin-ui .input-field:focus,
+.admin-ui input:focus,
+.admin-ui select:focus,
+.admin-ui textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26, 92, 46, 0.12);
+}
+.admin-ui ::placeholder { color: #a39f90; }
+.admin-ui input[type='checkbox'],
+.admin-ui input[type='radio'] { accent-color: var(--primary); }
+.admin-ui label { color: var(--text-secondary); }
+
+/* ── Badges ── */
+.admin-ui .badge {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* ── Data grid: every table in the admin ──
+   Compact rows, cell lines, sticky muted header, zebra stripes, hover.
+   Opt out with `.no-grid` on the table or a wrapper (printable documents). */
+.admin-ui table:not(.no-grid *):not(.no-grid) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.admin-ui table:not(.no-grid *):not(.no-grid) th,
+.admin-ui table:not(.no-grid *):not(.no-grid) td {
+  padding: 7px 12px;
+  line-height: 1.35;
+  vertical-align: middle;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.admin-ui table:not(.no-grid *):not(.no-grid) th:last-child,
+.admin-ui table:not(.no-grid *):not(.no-grid) td:last-child { border-right: 0; }
+.admin-ui table:not(.no-grid *):not(.no-grid) thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  background: var(--surface-secondary);
+  border-bottom-color: var(--border-strong);
+  white-space: nowrap;
+}
+.admin-ui table:not(.no-grid *):not(.no-grid) thead tr { background: transparent; }
+.admin-ui table:not(.no-grid *):not(.no-grid) tbody tr:nth-child(even) > td {
+  background-color: color-mix(in srgb, var(--surface-secondary) 60%, transparent);
+}
+.admin-ui table:not(.no-grid *):not(.no-grid) tbody tr:hover > td { background-color: var(--surface-hover); }
+.admin-ui table:not(.no-grid *):not(.no-grid) tbody tr:last-child > td { border-bottom: 0; }
+.admin-ui table:not(.no-grid *):not(.no-grid) tfoot td {
+  background: var(--surface-secondary);
+  font-weight: 700;
+  border-top: 1px solid var(--border-strong);
+}
+.admin-ui table:not(.no-grid *):not(.no-grid) td[colspan] { padding: 2rem 1rem; text-align: center; border-right: 0; }
+/* Remove Tailwind row dividers — the grid draws its own lines */
+.admin-ui table:not(.no-grid *):not(.no-grid) tbody.divide-y > * + * { border-top-width: 0; }
+
+/* The scroll box a table sits in */
+.admin-ui .grid-box {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.admin-ui .grid-box > table thead th:first-child { border-top-left-radius: var(--radius-card); }
+.admin-ui .grid-box > table thead th:last-child { border-top-right-radius: var(--radius-card); }
+
+/* ── Scrollbars ── */
+.admin-ui ::-webkit-scrollbar { width: 10px; height: 10px; }
+.admin-ui ::-webkit-scrollbar-track { background: transparent; }
+.admin-ui ::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid var(--background);
+}
+.admin-ui ::selection { background-color: rgba(26, 92, 46, 0.18); }
+
+/* ── Skeleton shimmer ── */
+.admin-ui .skeleton {
+  display: inline-block;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface-hover) 0%, #f7f2e8 50%, var(--surface-hover) 100%);
+  background-size: 200% 100%;
+  animation: admin-skeleton 1.4s ease-in-out infinite;
+}
+@keyframes admin-skeleton { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .admin-ui .skeleton { animation: none; } }
+
+/* Number inputs: no spin buttons */
+.admin-ui input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+.admin-ui input[type='number']::-webkit-outer-spin-button,
+.admin-ui input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Shared loading skeletons (components/ui/Skeleton) take the warm admin palette */
+.admin-ui .sk {
+  background: linear-gradient(90deg, var(--surface-hover) 0%, #f7f2e8 50%, var(--surface-hover) 100%);
+  background-size: 200% 100%;
+}
