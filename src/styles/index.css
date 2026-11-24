@@ -26,6 +26,11 @@
 
   html { scroll-behavior: smooth; }
 
+  /* Full-screen overlays (modals, drawers, viewers) are often rendered inside a `space-y-*` / `gap` list,
+     which gives every child a margin-top. On a `fixed inset-0` element that margin pushes the whole
+     backdrop + dialog down and leaves an uncovered strip at the top — never let overlays take margins. */
+  .fixed.inset-0 { margin: 0 !important; }
+
   body {
     /* Poppins everywhere by default — readable, modern, clean */
     font-family: 'Poppins', system-ui, -apple-system, sans-serif;

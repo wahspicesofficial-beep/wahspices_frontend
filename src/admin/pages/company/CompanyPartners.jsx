@@ -10,7 +10,7 @@ import { DateRange } from '@/admin/components/company/shared';
 import { apiGet, errMsg, fmtAmt, fmtDate, fyStart, isoDay, today, usePartners } from '@/admin/components/company/companyUtils';
 import PartnerTxnDialog from '@/admin/pages/company/PartnerTxnDialog';
 
-const EMPTY = { name: '', phone: '', email: '', sharePercent: '', isActive: true, joinedOn: '', notes: '' };
+const EMPTY = { name: '', phone: '', email: '', sharePercent: '', isActive: true, joinedOn: '', notes: '', adminUserId: '' };
 const TXN_TONE = { Contribution: 'success', Withdrawal: 'warning', Settlement: 'info' };
 const TXN_LABEL = { Contribution: 'Capital in', Withdrawal: 'Withdrawal', Settlement: 'Settlement' };
 const money = (n, strong) => <span className={`tabular-nums ${strong ? 'font-bold' : ''} ${Number(n) < 0 ? 'text-[color:var(--danger)]' : ''}`}>{fmtAmt(n)}</span>;
@@ -24,6 +24,11 @@ export default function CompanyPartners() {
   const [saving, setSaving] = useState(false);
   const [txnDialog, setTxnDialog] = useState(null); // { suggestion? , type? }
   const [statement, setStatement] = useState(null); // { partner, data }
+  const [logins, setLogins] = useState([]);           // admin logins a partner can be linked to (expense approvals)
+  useEffect(() => {
+    if (!edit) return;
+    apiGet('/admin/company/partner-logins').then(setLogins).catch(() => setLogins([]));
+  }, [edit?.id, !!edit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLedger = useCallback(async () => {
     const params = { from: range.from || undefined, to: range.to || undefined };
@@ -41,7 +46,8 @@ export default function CompanyPartners() {
     if (share < 0 || share > 100) { toast.error('Share % must be between 0 and 100'); return; }
     setSaving(true);
     try {
-      const body = { ...edit, sharePercent: share, joinedOn: edit.joinedOn || null, phone: edit.phone || null, email: edit.email || null, notes: edit.notes || null };
+      const body = { ...edit, sharePercent: share, joinedOn: edit.joinedOn || null, phone: edit.phone || null, email: edit.email || null, notes: edit.notes || null,
+        adminUserId: edit.adminUserId ? Number(edit.adminUserId) : null };
       const res = edit.id ? await api.put(`/admin/company/partners/${edit.id}`, body) : await api.post('/admin/company/partners', body);
       toast.success(edit.id ? 'Partner updated' : 'Partner added');
       if (res.data.data?.shareWarning) toast(res.data.data.shareWarning, { icon: '⚠️' });
@@ -89,19 +95,20 @@ export default function CompanyPartners() {
         ) : (
           <div className="grid-box">
             <table>
-              <thead><tr><th className="text-left">Name</th><th className="text-left">Contact</th><th className="text-right">Share %</th><th className="text-left">Joined</th><th className="text-left">Status</th><th className="text-center">Actions</th></tr></thead>
+              <thead><tr><th className="text-left">Name</th><th className="text-left">Contact</th><th className="text-left">Admin login</th><th className="text-right">Share %</th><th className="text-left">Joined</th><th className="text-left">Status</th><th className="text-center">Actions</th></tr></thead>
               <tbody>
                 {partners.map((p) => (
                   <tr key={p.id}>
                     <td className="font-bold">{p.name}{p.notes && <div className="max-w-60 truncate text-[12px] font-normal text-[color:var(--text-muted)]">{p.notes}</div>}</td>
                     <td className="text-[12px] text-[color:var(--text-secondary)]">{[p.phone, p.email].filter(Boolean).join(' · ') || '—'}</td>
+                    <td className="text-[12px]">{p.adminLogin ? <span className="text-[color:var(--text-secondary)]">{p.adminLogin}</span> : <Badge tone="warning" title="Link a login so this partner can approve the other partners' expenses">Not linked</Badge>}</td>
                     <td className="text-right font-bold tabular-nums">{Number(p.sharePercent)}%</td>
                     <td className="text-[color:var(--text-muted)]">{fmtDate(p.joinedOn)}</td>
                     <td><Badge tone={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Active' : 'Inactive'}</Badge></td>
                     <td>
                       <div className="flex items-center justify-center gap-1">
                         <IconButton label="Statement" onClick={() => openStatement(p)}><FileText className="size-3.5" /></IconButton>
-                        <IconButton label="Edit" onClick={() => setEdit({ ...EMPTY, ...p, sharePercent: String(p.sharePercent), joinedOn: isoDay(p.joinedOn), phone: p.phone || '', email: p.email || '', notes: p.notes || '' })}><Edit2 className="size-3.5" /></IconButton>
+                        <IconButton label="Edit" onClick={() => setEdit({ ...EMPTY, ...p, sharePercent: String(p.sharePercent), joinedOn: isoDay(p.joinedOn), phone: p.phone || '', email: p.email || '', notes: p.notes || '', adminUserId: p.adminUserId ? String(p.adminUserId) : '' })}><Edit2 className="size-3.5" /></IconButton>
                         <IconButton label="Delete" tone="danger" onClick={() => removePartner(p)}><Trash2 className="size-3.5" /></IconButton>
                       </div>
                     </td>
@@ -220,6 +227,15 @@ export default function CompanyPartners() {
                 </Field>
                 <Field label="Joined on"><input type="date" value={edit.joinedOn} onChange={(e) => setEdit({ ...edit, joinedOn: e.target.value })} className="input-field" /></Field>
               </div>
+              <Field label="Admin login" hint="The partner's own admin-panel account. Partners approve each other's expenses — nobody can approve an expense they added.">
+                <select value={edit.adminUserId} onChange={(e) => setEdit({ ...edit, adminUserId: e.target.value })} className="input-field">
+                  <option value="">— Not linked —</option>
+                  {logins.map((u) => {
+                    const takenByOther = u.linkedPartnerId && u.linkedPartnerId !== edit.id;
+                    return <option key={u.id} value={u.id} disabled={takenByOther}>{u.name} ({u.email}){takenByOther ? ` — linked to ${u.linkedPartnerName}` : ''}</option>;
+                  })}
+                </select>
+              </Field>
               <label className="flex items-center gap-2 text-[13px]">
                 <input type="checkbox" checked={edit.isActive} onChange={(e) => setEdit({ ...edit, isActive: e.target.checked })} /> Active partner (included in splits)
               </label>

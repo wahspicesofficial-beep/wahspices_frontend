@@ -229,8 +229,12 @@ export default function AdminExpense() {
   const catChip = (name) => (
     <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-bold ${catColor(name)}`}>{name}</span>
   );
+  // Approval: only another partner can approve — never the admin who added the expense (server-enforced).
   const approvedBadge = (exp) => (
-    <Badge tone={exp.isApproved ? 'success' : 'warning'}>{exp.isApproved ? 'Approved' : 'Pending'}</Badge>
+    <Badge tone={exp.isApproved ? 'success' : 'warning'}
+      title={exp.isApproved ? `Approved by ${exp.approvedBy || '—'}` : exp.addedByMe ? 'You added this — another partner has to approve it' : `Added by ${exp.addedBy || '—'}`}>
+      {exp.isApproved ? 'Approved' : exp.addedByMe ? 'Waiting for partner' : 'Pending'}
+    </Badge>
   );
   const skeletonRows = (cols) => Array.from({ length: 5 }).map((_, i) => (
     <tr key={i}>
@@ -324,7 +328,7 @@ export default function AdminExpense() {
                           <td>{approvedBadge(exp)}</td>
                           <td>
                             <div className="flex items-center justify-center gap-1">
-                              {!exp.isApproved && (
+                              {!exp.isApproved && exp.canApprove && (
                                 <IconButton label="Approve" tone="primary" onClick={() => handleApprove(exp.id)}><Check className="size-3.5" /></IconButton>
                               )}
                               <IconButton label="Edit" onClick={() => openEdit(exp)}><Edit2 className="size-3.5" /></IconButton>
@@ -487,9 +491,13 @@ export default function AdminExpense() {
                         <td className="text-[color:var(--text-muted)]">{paidByText(exp)}{exp.splitMethod && exp.splitMethod !== 'None' && <Badge tone="primary" className="ml-1">Split</Badge>}</td>
                         <td className="whitespace-nowrap text-right font-bold">{fmtAmt(exp.amount)}</td>
                         <td className="text-center">
-                          <Button size="sm" className="!h-7 !px-2 !text-[12px]" onClick={() => handleApprove(exp.id)}>
-                            <Check className="size-3" /> Approve
-                          </Button>
+                          {exp.canApprove ? (
+                            <Button size="sm" className="!h-7 !px-2 !text-[12px]" onClick={() => handleApprove(exp.id)}>
+                              <Check className="size-3" /> Approve
+                            </Button>
+                          ) : (
+                            <span className="text-[11px] text-[color:var(--text-muted)]">{exp.addedByMe ? 'Added by you — another partner approves' : 'Only a partner can approve'}</span>
+                          )}
                         </td>
                       </tr>
                     ))}

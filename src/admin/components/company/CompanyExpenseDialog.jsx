@@ -56,7 +56,8 @@ export default function CompanyExpenseDialog({ expense, partners, categories = [
         try { await uploadFile('expense', saved.id, pendingFile); }
         catch (err) { toast.error(errMsg(err, 'Expense saved, but the receipt upload failed')); }
       }
-      toast.success(expense ? 'Expense updated' : 'Expense recorded');
+      // the server says when an edit needs approval again / that another partner must approve a new one
+      toast.success(res?.data?.message && res.data.message !== 'Saved.' ? res.data.message : (expense ? 'Expense updated' : 'Expense recorded'), { duration: 6000 });
       onSaved?.(saved);
     } catch (err) {
       toast.error(errMsg(err, 'Could not save the expense'));

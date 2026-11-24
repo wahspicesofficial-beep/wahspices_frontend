@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Download, Edit2, Paperclip, Plus, Receipt, Trash2, UserRound, Building2 } from 'lucide-react';
+import { Download, Edit2, Paperclip, Plus, Receipt, Trash2, UserRound, Building2, CheckCircle2, Hourglass, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '@/services/api';
 import {
   Badge, Button, Card, EmptyState, IconButton, PageHeader, Pagination, SearchInput, Skeleton, Stat, Toolbar, usePagination,
@@ -16,7 +17,8 @@ export default function CompanyExpenses() {
   const lk = useLookups();
   const { partners, reload: reloadPartners } = usePartners();
   const [range, setRange] = useState({ from: monthStart(), to: today() });
-  const [filters, setFilters] = useState({ partnerId: '', payer: '', category: '' });
+  const [filters, setFilters] = useState({ partnerId: '', payer: '', category: '', approval: '' });
+  const [approving, setApproving] = useState(null);
   const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -28,6 +30,7 @@ export default function CompanyExpenses() {
       setData(await apiGet('/admin/company/expenses', {
         from: range.from || undefined, to: range.to || undefined,
         partnerId: filters.partnerId || undefined, payer: filters.payer || undefined, category: filters.category || undefined,
+        approval: filters.approval || undefined,
       }));
     } catch (err) { toast.error(errMsg(err, 'Could not load expenses')); setData({ expenses: [], totals: {} }); }
   }, [range, filters]);
@@ -55,6 +58,15 @@ export default function CompanyExpenses() {
     catch (err) { toast.error(errMsg(err, 'Could not delete')); }
   };
 
+  // Only another partner can approve — never the one who added the expense (the server enforces this too).
+  const approve = async (e) => {
+    if (!window.confirm(`Approve "${e.description}" for ${fmtAmt(e.amount)}, added by ${e.addedBy || 'another admin'}?`)) return;
+    setApproving(e.id);
+    try { const r = await api.put(`/admin/company/expenses/${e.id}/approve`); toast.success(r.data?.message || 'Expense approved'); load(); }
+    catch (err) { toast.error(errMsg(err, 'Could not approve')); }
+    setApproving(null);
+  };
+
   const exportXlsx = async () => {
     setExporting(true);
     await downloadFile('/admin/company/reports/export', 'Company_finance.xlsx', { from: range.from || undefined, to: range.to || undefined });
@@ -62,6 +74,7 @@ export default function CompanyExpenses() {
   };
 
   const t = data?.totals || {};
+  const me = data?.me || {};
   const modeLabel = (e) => (e.payerType === 'Partner' ? 'Personal money' : lk.label('ExpensePaidBy', e.paidBy));
 
   return (
@@ -76,8 +89,17 @@ export default function CompanyExpenses() {
         <Stat label="Total in range" value={fmtAmt(t.amount)} icon={Receipt} tone="danger" loading={!data} />
         <Stat label="Paid by partners" value={fmtAmt(t.partnerPaid)} icon={UserRound} tone="accent" loading={!data} />
         <Stat label="Paid by company" value={fmtAmt(t.companyPaid)} icon={Building2} tone="info" loading={!data} />
-        <Stat label="Entries" value={t.count ?? 0} loading={!data} />
+        <Stat label="Waiting for your approval" value={t.awaitingMe ?? 0} icon={Hourglass} tone={t.awaitingMe ? 'warning' : 'neutral'}
+          hint={`${t.pending ?? 0} pending · ${t.count ?? 0} entries`} loading={!data} />
       </div>
+
+      {data && !me.isPartner && (
+        <div className="flex items-start gap-2 rounded-[8px] border border-[color:var(--border)] bg-[color:var(--info-bg)] px-3 py-2 text-[13px]">
+          <Info className="mt-0.5 size-4 shrink-0 text-[color:var(--info)]" />
+          <span>Only partners can approve expenses, and never the ones they added themselves. Your admin login isn't linked to a partner yet — link it in{' '}
+            <Link to="/admin/company/partners" className="font-bold text-[color:var(--primary)] hover:underline">Partners &amp; ledger</Link> (edit partner → Admin login).</span>
+        </div>
+      )}
 
       <Card bodyClassName="space-y-3 p-3">
         <Toolbar>
@@ -95,6 +117,12 @@ export default function CompanyExpenses() {
             <option value="">All categories</option>
             {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          <select value={filters.approval} onChange={(e) => setFilters((p) => ({ ...p, approval: e.target.value }))} className="input-field !h-9 !w-52" aria-label="Approval">
+            <option value="">Any approval status</option>
+            <option value="mine">Waiting for my approval</option>
+            <option value="pending">Pending approval</option>
+            <option value="approved">Approved</option>
+          </select>
           <SearchInput value={search} onChange={setSearch} placeholder="Search description…" className="max-w-xs" />
         </Toolbar>
 
@@ -111,6 +139,7 @@ export default function CompanyExpenses() {
                     <th className="text-right">Amount</th>
                     <th className="text-left">Paid by</th>
                     <th className="text-left">Split</th>
+                    <th className="text-left">Approval</th>
                     <th className="text-center">Actions</th>
                   </tr>
                 </thead>
@@ -123,7 +152,6 @@ export default function CompanyExpenses() {
                         <div className="flex flex-wrap items-center gap-1 text-[12px] text-[color:var(--text-muted)]">
                           {e.category}
                           {e.sourceType && <Badge tone="info">{e.sourceType === 'Asset' ? 'Asset' : 'Licence'}</Badge>}
-                          {!e.isApproved && <Badge tone="warning">Pending approval</Badge>}
                         </div>
                       </td>
                       <td className="whitespace-nowrap text-right font-bold tabular-nums">{fmtAmt(e.amount)}</td>
@@ -134,6 +162,24 @@ export default function CompanyExpenses() {
                       <td className="max-w-72">
                         <div className="mb-0.5 text-[11px] text-[color:var(--text-muted)]">{splitLabel(e.splits?.length ? e.splitMethod : 'None')}</div>
                         <SplitChips splits={e.splits} />
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {e.isApproved ? (
+                          <>
+                            <Badge tone="success"><CheckCircle2 className="size-3" /> Approved</Badge>
+                            <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">by {e.approvedBy}{e.approvedAt ? ` · ${fmtDate(e.approvedAt)}` : ''}</div>
+                          </>
+                        ) : e.canApprove ? (
+                          <>
+                            <Button size="sm" onClick={() => approve(e)} loading={approving === e.id}><CheckCircle2 className="size-3.5" /> Approve</Button>
+                            <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">Added by {e.addedBy || '—'}</div>
+                          </>
+                        ) : (
+                          <>
+                            <Badge tone="warning">{e.addedByMe ? 'Waiting for other partner' : 'Pending approval'}</Badge>
+                            <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">{e.addedByMe ? 'Added by you' : `Added by ${e.addedBy || '—'}`}</div>
+                          </>
+                        )}
                       </td>
                       <td>
                         <div className="flex items-center justify-center gap-1">
