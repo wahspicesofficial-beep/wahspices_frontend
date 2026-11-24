@@ -34,11 +34,12 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
-  // Testimonials: approved + featured customer feedback (admin → Feedback); the editable defaults otherwise.
+  // Testimonials: only real customer feedback the admin has approved + featured (admin → Feedback).
+  // No placeholder reviews — the section is hidden until there is at least one.
   const { featuredTestimonials, block } = useSiteContent();
   const hero = useHeroSlides(block('home-hero'), HERO_BG,
     'Sourced from the best spice-growing regions of India. No artificial colors, no preservatives — just pure, bold, authentic flavors for every Indian kitchen.');
-  const testimonials = (featuredTestimonials.length ? featuredTestimonials : (block('testimonials').items || []))
+  const testimonials = featuredTestimonials
     .map((t) => ({ ...t, rating: Math.max(1, Math.min(5, Number(t.rating) || 5)), initial: t.initial || String(t.name || '?').charAt(0).toUpperCase() }));
 
   return (
@@ -426,6 +427,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           TESTIMONIALS
       ══════════════════════════════════════════ */}
+      {testimonials.length > 0 && (
       <section className="section-padding bg-brand-green-dark">
         <div className="container-custom">
           <motion.div
@@ -477,6 +479,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ══════════════════════════════════════════
           NEWSLETTER

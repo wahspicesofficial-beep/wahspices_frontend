@@ -400,23 +400,6 @@ function HomeHeroEditor({ d, set }) {
   );
 }
 
-function TestimonialsEditor({ d, set }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-[6px] bg-[color:var(--info-bg)] p-2.5 text-[12px] text-[color:var(--info)]">
-        <Info className="mt-0.5 size-3.5 shrink-0" />
-        <span>The home page shows customer feedback you <b>feature</b> in <Link to="/admin/feedback" className="underline">Feedback</Link>. These testimonials are shown only while no feedback is featured.</span>
-      </div>
-      <ObjectList items={d.items} onChange={(v) => set({ items: v })} newItem={{ name: '', city: '', rating: 5, text: '', product: '' }} addLabel="Add testimonial"
-        itemTitle={(x) => x.name || 'New testimonial'}
-        fields={[
-          { key: 'name', label: 'Name', span: 'md' }, { key: 'city', label: 'City', span: 'md' }, { key: 'product', label: 'Product', span: 'md' },
-          { key: 'rating', label: 'Stars (1–5)', type: 'number', span: 'sm' }, { key: 'text', label: 'Quote', type: 'textarea', span: 'full' },
-        ]} />
-    </div>
-  );
-}
-
 function MaintenanceEditor({ d, set, settings }) {
   return (
     <div className="space-y-3">
@@ -444,11 +427,10 @@ const SECTIONS = [
   { id: 'help', label: 'Help & FAQ', keys: ['help'], Editor: HelpEditor, desc: 'Help Center quick links and FAQs.' },
   { id: 'about', label: 'About', keys: ['about'], Editor: AboutEditor, desc: 'About Us story, stats, values and team.' },
   { id: 'policies', label: 'Policies', keys: ['policy-shipping', 'policy-return', 'policy-privacy', 'policy-quality', 'policy-terms'], Editor: PolicyEditor, desc: 'Shipping, return, privacy, quality and terms pages.' },
-  { id: 'testimonials', label: 'Testimonials', keys: ['testimonials'], Editor: TestimonialsEditor, desc: 'Default home-page testimonials.' },
   { id: 'maintenance', label: 'Maintenance', keys: ['maintenance'], Editor: MaintenanceEditor, desc: 'What customers see while maintenance mode is on.' },
 ];
 const POLICY_LABELS = { 'policy-shipping': 'Shipping', 'policy-return': 'Return', 'policy-privacy': 'Privacy', 'policy-quality': 'Quality', 'policy-terms': 'Terms' };
-const PUBLIC_PATH = { 'home-hero': '/', header: '/', footer: '/', social: '/contact', contact: '/contact', feedback: '/feedback', help: '/help', about: '/about', testimonials: '/', maintenance: '/',
+const PUBLIC_PATH = { 'home-hero': '/', header: '/', footer: '/', social: '/contact', contact: '/contact', feedback: '/feedback', help: '/help', about: '/about', maintenance: '/',
   'policy-shipping': '/shipping-policy', 'policy-return': '/return-policy', 'policy-privacy': '/privacy-policy', 'policy-quality': '/quality-policy', 'policy-terms': '/terms-conditions' };
 
 const PLACEHOLDERS = ['siteName', 'tagline', 'phone', 'email', 'address', 'freeDeliveryAbove', 'deliveryCharge', 'avgDeliveryDays', 'year'];

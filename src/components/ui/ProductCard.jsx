@@ -155,20 +155,26 @@ export default function ProductCard({ product }) {
             <p className="text-[11px] text-gray-400 font-body mb-2 truncate">{product.stateLabel}</p>
           )}
 
-          <div className="flex items-center gap-1 mb-3">
-            <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="w-2.5 h-2.5"
-                  fill={i < Math.floor(product.rating || 0) ? '#f5a623' : 'none'}
-                  stroke={i < Math.floor(product.rating || 0) ? '#f5a623' : '#e5e7eb'}
-                />
-              ))}
-            </div>
-            <span className="text-[10px] text-gray-400 font-body">
-              ({product.reviews >= 1000 ? `${(product.reviews / 1000).toFixed(1)}k` : (product.reviews || 0)})
-            </span>
+          <div className="flex items-center gap-1 mb-3 min-h-[14px]">
+            {Number(product.reviews) > 0 ? (
+              <>
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className="w-2.5 h-2.5"
+                      fill={i < Math.floor(product.rating || 0) ? '#f5a623' : 'none'}
+                      stroke={i < Math.floor(product.rating || 0) ? '#f5a623' : '#e5e7eb'}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] text-gray-400 font-body">
+                  ({product.reviews >= 1000 ? `${(product.reviews / 1000).toFixed(1)}k` : product.reviews})
+                </span>
+              </>
+            ) : (
+              <span className="text-[10px] text-gray-400 font-body">No reviews yet</span>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
