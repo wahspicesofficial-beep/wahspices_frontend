@@ -26,6 +26,12 @@ export const adminVerify2FALogin = createAsyncThunk('admin/verify2FALogin', asyn
   }
 });
 
+// Invited / reset account: set your own password before the first session is issued.
+export const adminSetFirstPassword = createAsyncThunk('admin/setFirstPassword', async ({ changeToken, newPassword }, { rejectWithValue }) => {
+  try { const res = await api.post('/admin/auth/first-password', { changeToken, newPassword }); return res.data.data; }
+  catch (err) { return rejectWithValue(err.response?.data?.error?.message || 'Could not set your password'); }
+});
+
 // Live profile + effective permissions (role + per-user overrides). The sidebar filter reads
 // state.admin.permissions, so re-fetching this applies permission changes without a re-login.
 // Forced 2FA setup during login (Settings → Security → "Require 2FA for all admins").
@@ -1056,7 +1062,8 @@ export const fetchAdminUsers = createAsyncThunk('admin/fetchAdminUsers', async (
   catch (err) { return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch admin users'); }
 });
 export const createAdminUser = createAsyncThunk('admin/createAdminUser', async (data, { rejectWithValue }) => {
-  try { const res = await api.post('/admin/users', data); return res.data.data; }
+  // → { user, emailSent, message }: the sign-in details are emailed to the new user
+  try { const res = await api.post('/admin/users', data); return { ...res.data.data, message: res.data.message }; }
   catch (err) { return rejectWithValue(err.response?.data?.error?.message || 'Failed to create admin user'); }
 });
 export const updateAdminUser = createAsyncThunk('admin/updateAdminUser', async ({ id, ...data }, { rejectWithValue }) => {
@@ -1068,7 +1075,7 @@ export const deleteAdminUser = createAsyncThunk('admin/deleteAdminUser', async (
   catch (err) { return rejectWithValue(err.response?.data?.error?.message || 'Failed to delete user'); }
 });
 export const resetAdminPassword = createAsyncThunk('admin/resetAdminPassword', async (id, { rejectWithValue }) => {
-  try { const res = await api.post(`/admin/users/${id}/reset-password`); return res.data.data; }
+  try { const res = await api.post(`/admin/users/${id}/reset-password`); return { ...res.data.data, message: res.data.message }; }
   catch (err) { return rejectWithValue(err.response?.data?.error?.message || 'Failed to reset password'); }
 });
 export const saveUserPermissions = createAsyncThunk('admin/saveUserPermissions', async ({ id, permissions }, { rejectWithValue }) => {
@@ -1275,6 +1282,8 @@ const adminSlice = createSlice({
     tempToken: null,
     requires2FASetup: false,
     setupToken: null,
+    requiresPasswordChange: false,
+    changeToken: null,
     loading: false,
     error: null,
     dashboard: {
@@ -1319,7 +1328,7 @@ const adminSlice = createSlice({
   reducers: {
     clearAdminError: (state) => { state.error = null; },
     adminSessionEnded: (state) => { state.admin = null; state.token = null; state.isLoggedIn = false; },
-    cancelAdmin2FA: (state) => { state.requires2FA = false; state.tempToken = null; state.requires2FASetup = false; state.setupToken = null; state.error = null; },
+    cancelAdmin2FA: (state) => { state.requires2FA = false; state.tempToken = null; state.requires2FASetup = false; state.setupToken = null; state.requiresPasswordChange = false; state.changeToken = null; state.error = null; },
   },
   extraReducers: (builder) => {
     builder
@@ -1343,6 +1352,11 @@ const adminSlice = createSlice({
           state.requires2FASetup = true;
           state.setupToken       = action.payload.setupToken;
         }
+        // Invited / reset account — must choose a new password first
+        if (action.payload?.requiresPasswordChange) {
+          state.requiresPasswordChange = true;
+          state.changeToken            = action.payload.changeToken;
+        }
       })
       .addCase(adminLogin.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(adminVerify2FALogin.pending, (state) => { state.loading = true; state.error = null; })
@@ -1350,6 +1364,10 @@ const adminSlice = createSlice({
         state.loading = false;
         state.requires2FA = false;
         state.tempToken   = null;
+        if (action.payload?.requiresPasswordChange) {
+          state.requiresPasswordChange = true;
+          state.changeToken            = action.payload.changeToken;
+        }
         if (action.payload?.token) {
           state.token = action.payload.token;
           state.admin = action.payload.admin;
@@ -1372,6 +1390,24 @@ const adminSlice = createSlice({
         }
       })
       .addCase(adminEnable2FALogin.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      .addCase(adminSetFirstPassword.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(adminSetFirstPassword.fulfilled, (state, action) => {
+        state.loading = false;
+        state.requiresPasswordChange = false;
+        state.changeToken = null;
+        if (action.payload?.requires2FASetup) {      // policy: 2FA must be set up next
+          state.requires2FASetup = true;
+          state.setupToken       = action.payload.setupToken;
+        }
+        if (action.payload?.token) {
+          state.token = action.payload.token;
+          state.admin = action.payload.admin;
+          state.isLoggedIn = true;
+          setAuthToken('admin', action.payload.token);
+          localStorage.setItem('wah_admin_user', JSON.stringify(state.admin));
+        }
+      })
+      .addCase(adminSetFirstPassword.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
 
       .addCase(fetchAdminMe.fulfilled, (state, action) => {
         if (!action.payload || !state.isLoggedIn) return;
@@ -1885,7 +1921,7 @@ const adminSlice = createSlice({
 
       // ── Access Control ────────────────────────────────────────────────────
       .addCase(fetchAdminUsers.fulfilled, (state, action) => { state.accessControl.users = action.payload || []; })
-      .addCase(createAdminUser.fulfilled, (state, action) => { if (action.payload) state.accessControl.users.push(action.payload); })
+      .addCase(createAdminUser.fulfilled, (state, action) => { const u = action.payload?.user; if (u) state.accessControl.users.push(u); })
       .addCase(updateAdminUser.fulfilled, (state, action) => {
         if (action.payload) { const i = state.accessControl.users.findIndex(u => u.id === action.payload.id); if (i >= 0) state.accessControl.users[i] = action.payload; }
       })

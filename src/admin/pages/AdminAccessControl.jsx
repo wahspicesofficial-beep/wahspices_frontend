@@ -216,6 +216,15 @@ function SkRoles() {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
+/** Random temporary password that passes the admin policy (10+ chars, letters + numbers). */
+function generateTempPassword() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', digits = '23456789', all = letters + digits + '@#$%';
+  const pick = (set) => set[crypto.getRandomValues(new Uint32Array(1))[0] % set.length];
+  const chars = [pick(letters), pick(letters), pick(digits), pick(digits), ...Array.from({ length: 8 }, () => pick(all))];
+  for (let i = chars.length - 1; i > 0; i--) { const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+  return chars.join('');
+}
+
 export default function AdminAccessControl() {
   const dispatch = useDispatch();
   const { users, roles, auditLog, total: auditTotal, sessions, twoFA } = useSelector(s => s.admin.accessControl);
@@ -264,6 +273,7 @@ export default function AdminAccessControl() {
   const [backupCodes, setBackupCodes] = useState([]);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [tempPwd, setTempPwd]         = useState(null);
+  const [tempPwdEmailed, setTempPwdEmailed] = useState(false);
 
   const loadMe = async () => {
     try {
@@ -480,7 +490,8 @@ export default function AdminAccessControl() {
     const r = await dispatch(createAdminUser({ name: form.name.trim(), email: form.email.trim(), password: form.password, roleId: Number(form.roleId) }));
     setSaving(false);
     if (r.meta.requestStatus === 'fulfilled') {
-      toast.success('User created!', { icon: '👤', style: { borderRadius: '12px' } });
+      if (r.payload?.emailSent) toast.success(r.payload.message || `User created — sign-in details emailed to ${form.email.trim()}`, { icon: '📧', duration: 6000, style: { borderRadius: '12px' } });
+      else toast.error(r.payload?.message || 'User created, but the email could not be sent — share the sign-in details yourself.', { duration: 9000 });
       setModal(null);
     } else {
       toast.error(r.payload || 'Failed to create user');
@@ -530,6 +541,7 @@ export default function AdminAccessControl() {
     if (r.meta.requestStatus === 'fulfilled') {
       // show it in a dialog (once) so it can be copied — never only in a disappearing toast
       setTempPwd(r.payload?.tempPassword || '');
+      setTempPwdEmailed(!!r.payload?.emailSent);
       setModal('tempPwd');
     } else {
       toast.error(r.payload || 'Failed to reset');
@@ -754,6 +766,7 @@ export default function AdminAccessControl() {
                               <div className="flex flex-wrap items-center gap-1">
                                 <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
                                 {u.isLocked && <Badge tone="danger">Locked</Badge>}
+                                {u.mustChangePassword && <Badge tone="warning" title="Has not signed in and set their own password yet">First login pending</Badge>}
                               </div>
                             </td>
                             <td>
@@ -1199,7 +1212,11 @@ export default function AdminAccessControl() {
             <Field label="Email" required>
               <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="user@wahspices.in" className={inp} />
             </Field>
-            <Field label="Password" required hint="Minimum 8 characters">
+            <Field label="Temporary password" required hint={<>
+              Min 10 characters with letters and numbers. It is emailed to the user with their login, and they must change it at first sign-in.{' '}
+              <button type="button" className="font-bold text-[color:var(--primary)] hover:underline"
+                onClick={() => { setForm(p => ({ ...p, password: generateTempPassword() })); setShowPwd(true); }}>Generate one</button>
+            </>}>
               <PasswordInput
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
@@ -1315,6 +1332,11 @@ export default function AdminAccessControl() {
         >
           <div className="space-y-2 text-[13px]">
             <p className="text-[color:var(--text-secondary)]">New temporary password for <b>{selUser.name}</b> — shown only once:</p>
+            <p className={tempPwdEmailed ? 'text-[color:var(--success)]' : 'text-[color:var(--warning)]'}>
+              {tempPwdEmailed
+                ? `Also emailed to ${selUser.email}. They must set a new password when they sign in.`
+                : 'The email could not be sent — share it securely. They must set a new password when they sign in.'}
+            </p>
             <div className="flex items-center gap-2 rounded-[6px] border border-[color:var(--border)] bg-[color:var(--surface-secondary)] px-3 py-2">
               <code className="flex-1 break-all font-mono text-[14px]">{tempPwd}</code>
               <IconButton label="Copy password" tone="primary" onClick={async () => {

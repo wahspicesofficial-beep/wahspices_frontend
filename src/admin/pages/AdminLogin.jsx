@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, KeyRound, LockKeyhole, Check, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { QRCodeSVG } from 'qrcode.react';
-import { adminLogin, adminVerify2FALogin, adminSetup2FALogin, adminEnable2FALogin, cancelAdmin2FA } from '@/store/slices/adminSlice';
+import { adminLogin, adminVerify2FALogin, adminSetup2FALogin, adminEnable2FALogin, adminSetFirstPassword, cancelAdmin2FA } from '@/store/slices/adminSlice';
 import toast from 'react-hot-toast';
 import '@/admin/admin.css';
 
@@ -16,12 +16,22 @@ const loginSchema = yup.object({
   password: yup.string().min(6, 'Min 6 characters').required('Password is required'),
 });
 
+// Same rules the server enforces for admin passwords (the server also rejects common / personal passwords).
+const PASSWORD_RULES = [
+  { test: (p) => p.length >= 10, label: 'At least 10 characters' },
+  { test: (p) => /[A-Za-z]/.test(p), label: 'Contains a letter' },
+  { test: (p) => /\d/.test(p), label: 'Contains a number' },
+];
+
 export default function AdminLogin() {
   const [showPass, setShowPass] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { loading, error, requires2FA, tempToken, requires2FASetup, setupToken } = useAppSelector(s => s.admin);
+  const { loading, error, requires2FA, tempToken, requires2FASetup, setupToken, requiresPasswordChange, changeToken } = useAppSelector(s => s.admin);
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
   const [setupInfo, setSetupInfo] = useState(null);   // { secret, qrUri, backupCodes } for forced 2FA setup
 
   // Security policy requires 2FA and this admin hasn't set it up yet → fetch a secret + QR to scan.
@@ -40,7 +50,10 @@ export default function AdminLogin() {
   const onSubmit = async (data) => {
     const res = await dispatch(adminLogin({ email: data.email, password: data.password }));
     if (adminLogin.fulfilled.match(res)) {
-      if (res.payload?.requires2FA || res.payload?.requires2FASetup) { setTwoFACode(''); setSetupInfo(null); return; } // show 2FA step
+      if (res.payload?.requires2FA || res.payload?.requires2FASetup || res.payload?.requiresPasswordChange) { // next sign-in step
+        setTwoFACode(''); setSetupInfo(null); setNewPw(''); setConfirmPw('');
+        return;
+      }
       toast.success(`Welcome back${res.payload?.admin?.name ? `, ${res.payload.admin.name}` : ''}!`, { icon: '🛡️', style: { borderRadius: '12px' } });
       navigate('/admin');
     } else {
@@ -53,6 +66,7 @@ export default function AdminLogin() {
     const res = await dispatch(adminVerify2FALogin({ tempToken, code: twoFACode }));
     if (adminVerify2FALogin.fulfilled.match(res)) {
       setTwoFACode('');
+      if (res.payload?.requiresPasswordChange) return;   // first sign-in: new password next
       toast.success(`Welcome back${res.payload?.admin?.name ? `, ${res.payload.admin.name}` : ''}!`, { icon: '🛡️', style: { borderRadius: '12px' } });
       navigate('/admin');
     } else {
@@ -72,7 +86,23 @@ export default function AdminLogin() {
     }
   };
 
-  const step = requires2FASetup ? 'setup' : requires2FA ? '2fa' : 'login';
+  const onSetFirstPassword = async (e) => {
+    e?.preventDefault();
+    if (!PASSWORD_RULES.every((r) => r.test(newPw))) { toast.error('Your new password does not meet the rules below'); return; }
+    if (newPw !== confirmPw) { toast.error('The two passwords do not match'); return; }
+    const res = await dispatch(adminSetFirstPassword({ changeToken, newPassword: newPw }));
+    if (adminSetFirstPassword.fulfilled.match(res)) {
+      setNewPw(''); setConfirmPw('');
+      if (res.payload?.requires2FASetup) { toast.success('Password updated. Now set up two-factor sign-in.'); return; }
+      toast.success(`Password updated. Welcome${res.payload?.admin?.name ? `, ${res.payload.admin.name}` : ''}!`, { icon: '🛡️', style: { borderRadius: '12px' } });
+      navigate('/admin');
+    } else {
+      toast.error(res.payload || 'Could not set your password', { style: { borderRadius: '12px' } });
+    }
+  };
+
+  const step = requiresPasswordChange ? 'password' : requires2FASetup ? 'setup' : requires2FA ? '2fa' : 'login';
+  const pwMismatch = confirmPw.length > 0 && newPw !== confirmPw;
 
   return (
     <div className="admin-ui flex min-h-screen items-center justify-center bg-[color:var(--backdrop)] p-4">
@@ -90,17 +120,60 @@ export default function AdminLogin() {
         <div className="mb-5">
           <h1 className="flex items-center gap-2 text-[22px] font-bold">
             {step !== 'login' ? <KeyRound className="size-5 text-[color:var(--primary)]" /> : <ShieldCheck className="size-5 text-[color:var(--primary)]" />}
-            {step === 'setup' ? 'Set up two-factor sign-in' : step === '2fa' ? 'Two-factor verification' : 'Sign in'}
+            {step === 'password' ? 'Set your new password' : step === 'setup' ? 'Set up two-factor sign-in' : step === '2fa' ? 'Two-factor verification' : 'Sign in'}
           </h1>
           <p className="mt-1 text-[13px] text-[color:var(--text-muted)]">
-            {step === 'setup'
+            {step === 'password'
+              ? 'You signed in with a temporary password. Choose your own password to finish signing in — the temporary one will stop working.'
+              : step === 'setup'
               ? 'Your organisation requires 2FA. Scan the QR code with Google Authenticator, Microsoft Authenticator or similar, then enter the 6-digit code.'
               : step === '2fa' ? 'Enter the 6-digit code from your authenticator app.' : 'Use your admin account to open the control panel.'}
           </p>
         </div>
 
         <AnimatePresence mode="wait">
-          {step === 'setup' ? (
+          {step === 'password' ? (
+            <motion.form key="password" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+              onSubmit={onSetFirstPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-body font-semibold text-gray-700 mb-1.5">New password</label>
+                <div className="relative">
+                  <input type={showNewPw ? 'text' : 'password'} value={newPw} onChange={(e) => setNewPw(e.target.value)}
+                    autoComplete="new-password" placeholder="Choose a strong password" className="input-field pr-10" autoFocus />
+                  <button type="button" onClick={() => setShowNewPw((v) => !v)} aria-label={showNewPw ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <ul className="mt-2 space-y-0.5">
+                  {PASSWORD_RULES.map((r) => {
+                    const ok = r.test(newPw);
+                    return (
+                      <li key={r.label} className={`flex items-center gap-1.5 text-[12px] ${ok ? 'text-green-700' : 'text-gray-400'}`}>
+                        {ok ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}{r.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+              <div>
+                <label className="block text-sm font-body font-semibold text-gray-700 mb-1.5">Confirm new password</label>
+                <input type={showNewPw ? 'text' : 'password'} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)}
+                  autoComplete="new-password" placeholder="Type it again" className="input-field" />
+                {pwMismatch && <p className="text-red-500 text-xs mt-1">Passwords do not match</p>}
+              </div>
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              <button type="submit" disabled={loading || !newPw || !confirmPw || pwMismatch} className="btn-primary w-full !h-10">
+                {loading
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <><LockKeyhole className="w-4 h-4" /> Save password & continue</>}
+              </button>
+              <button type="button" onClick={() => { setNewPw(''); setConfirmPw(''); dispatch(cancelAdmin2FA()); }}
+                className="w-full text-center text-[12px] font-bold text-[color:var(--primary)] hover:underline">
+                ← Back to sign in
+              </button>
+            </motion.form>
+          ) : step === 'setup' ? (
             <motion.div key="setup" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
               className="space-y-4">
               {!setupInfo ? (

@@ -33,7 +33,7 @@ const isAdminCall = (url = '') => /^admin(\/|$)/.test(pathOf(url));
 const kindOf = (url) => (isAdminCall(url) ? 'admin' : 'customer');
 
 // Calls that establish a session themselves — never send/refresh a bearer token for these.
-const SESSION_FLOW = /^(auth\/(login|register|refresh|verify-email|resend-email-otp|send-otp|verify-otp|google|forgot-password|reset-password)|admin\/auth\/(login|refresh|2fa\/verify-login|2fa\/setup-login|2fa\/enable-login))\/?$/;
+const SESSION_FLOW = /^(auth\/(login|register|refresh|verify-email|resend-email-otp|send-otp|verify-otp|google|forgot-password|reset-password)|admin\/auth\/(login|refresh|first-password|2fa\/verify-login|2fa\/setup-login|2fa\/enable-login))\/?$/;
 const isSessionFlow = (url) => SESSION_FLOW.test(pathOf(url));
 
 export const hasSession = (kind) => !!tokens[kind] || store.get(MARKER[kind]) === '1';
@@ -99,7 +99,7 @@ export const API_ORIGIN = BASE_URL.replace(/\/api\/?$/, '');
 // ── Human proof (proof-of-work) for abuse-prone endpoints — mirrors [RequireHumanProof] on the server ──
 const PROOF_RULES = [
   ['post', /^auth\/(register|login|verify-email|resend-email-otp|send-otp|verify-otp|forgot-password|reset-password)\/?$/, 'auth'],
-  ['post', /^admin\/auth\/(login|2fa\/verify-login|2fa\/enable-login)\/?$/, 'admin-auth'],
+  ['post', /^admin\/auth\/(login|first-password|2fa\/verify-login|2fa\/enable-login)\/?$/, 'admin-auth'],
   ['post', /^contact\/?$/, 'contact'],
   ['post', /^feedback\/?$/, 'feedback'],
   ['post', /^products\/\d+\/reviews\/?$/, 'review'],
