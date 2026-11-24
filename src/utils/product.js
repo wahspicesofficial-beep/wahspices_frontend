@@ -1,8 +1,9 @@
 // Helpers that turn API product payloads into what the UI components expect.
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5056/api';
-// Uploaded files are served by the API host itself (e.g. http://localhost:5056/uploads/...)
-export const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+import { ASSET_ORIGIN } from '@/config/apiEndpoints';
+
+// Uploaded files: same site in production (/uploads is proxied to the API), the API host in development.
+export const API_ORIGIN = ASSET_ORIGIN;
 
 /** Absolute URL for an image path coming from the API ("/uploads/..." or already absolute). */
 export function getImageUrl(url) {

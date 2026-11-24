@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getHumanProofHeaders } from './humanProof';
+import { API_URL, DIRECT_API_ORIGIN, DIRECT_API_URL } from '@/config/apiEndpoints';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5056/api';
+const BASE_URL = API_URL;   // '/api' in production (same-site via the Vercel proxy) — see config/apiEndpoints.js
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -93,8 +94,8 @@ export async function getAccessToken(kind = 'customer') {
   return token || '';
 }
 
-/** API origin (e.g. http://localhost:5056) — the SignalR hub lives at `${API_ORIGIN}/hubs/notifications`. */
-export const API_ORIGIN = BASE_URL.replace(/\/api\/?$/, '');
+/** API host (e.g. https://wahspices.runasp.net) — the SignalR hub lives at `${API_ORIGIN}/hubs/notifications`. */
+export const API_ORIGIN = DIRECT_API_ORIGIN;
 
 // ── Human proof (proof-of-work) for abuse-prone endpoints — mirrors [RequireHumanProof] on the server ──
 const PROOF_RULES = [
@@ -125,9 +126,12 @@ api.interceptors.request.use(async (config) => {
     if (token) config.headers.Authorization = `Bearer ${token}`;
     else delete config.headers.Authorization;
   }
+  // Large uploads skip the same-site proxy (it caps bodies at ~4 MB) and go to the API host with the bearer token.
+  if (import.meta.env.PROD && typeof FormData !== 'undefined' && config.data instanceof FormData) config.baseURL = DIRECT_API_URL;
   const scope = proofScope(config.method, config.url);
   if (scope) {
-    try { Object.assign(config.headers, await getHumanProofHeaders(BASE_URL, scope)); }
+    // challenge from the same host the request goes to (the proof is bound to the caller's IP)
+    try { Object.assign(config.headers, await getHumanProofHeaders(config.baseURL || BASE_URL, scope)); }
     catch { /* the server will answer 428 with a readable message */ }
   }
   return config;
