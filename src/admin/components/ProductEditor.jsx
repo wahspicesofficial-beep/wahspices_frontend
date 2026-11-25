@@ -33,6 +33,11 @@ const blankRow = (size) => ({
 export default function ProductEditor({ product, categories, packTypes, onClose, onSaved }) {
   const isEdit = !!product;
   const lk = useLookups();
+  // GST follows the HSN master: a matching HSN code sets (and locks) the rate — the server applies the same rule
+  const hsnHit = lk.resolveHsn(form.hsnCode);
+  useEffect(() => {
+    if (hsnHit && Number(form.gstRate) !== Number(hsnHit.gstRate)) setForm((f) => ({ ...f, gstRate: Number(hsnHit.gstRate) }));
+  }, [hsnHit?.code, hsnHit?.gstRate]); // eslint-disable-line react-hooks/exhaustive-deps
   // Standard pack sizes come from Settings -> Master data -> PackSize (e.g. "100g")
   const packSizeList = lk.list('PackSize');
   const standardSizes = useMemo(
@@ -248,11 +253,14 @@ export default function ProductEditor({ product, categories, packTypes, onClose,
                     {lookupOptions(badges, form.badge).map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
                   </select>
                 </Field>
-                <Field label="HSN Code">
-                  <input value={form.hsnCode} onChange={set('hsnCode')} className="input-field" placeholder="09109100" />
+                <Field label="HSN Code" hint={hsnHit ? `${hsnHit.code} · ${hsnHit.description}` : (form.hsnCode ? 'Not in the HSN master — choose the GST % yourself' : 'Pick from the HSN master (GST & Tax)')}>
+                  <input value={form.hsnCode} onChange={set('hsnCode')} className="input-field" placeholder="09109100" list="hsn-master-codes" />
+                  <datalist id="hsn-master-codes">
+                    {lk.hsnCodes.map((h) => <option key={h.code} value={h.code}>{`${h.gstRate}% — ${h.description}`}</option>)}
+                  </datalist>
                 </Field>
-                <Field label="GST %">
-                  <select value={form.gstRate} onChange={set('gstRate')} className="input-field">
+                <Field label="GST %" hint={hsnHit ? `From HSN master (${hsnHit.code}) — change it in GST & Tax → HSN Master` : undefined}>
+                  <select value={form.gstRate} onChange={set('gstRate')} className="input-field" disabled={!!hsnHit}>
                     {lookupOptions(gstSlabs, String(form.gstRate)).map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </Field>

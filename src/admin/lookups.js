@@ -59,8 +59,21 @@ export function useLookups() {
     currentYear: data?.currentYear || now.getFullYear(),
     currentMonth: data?.currentMonth || now.getMonth() + 1,
     types: data?.types || EMPTY,
+    /** HSN master (Admin → GST & Tax): [{ code, description, gstRate }] */
+    hsnCodes: data?.hsnCodes || EMPTY,
+    /** Most specific HSN master entry for a code ("09109100" → "0910"), or null. */
+    resolveHsn: (code) => resolveHsn(data?.hsnCodes, code),
     reload: reloadLookups,
   };
+}
+
+/** Longest HSN master code that is a prefix of `code` — the same rule the server uses for GST. */
+export function resolveHsn(master, code) {
+  const c = String(code || '').replace(/\D/g, '');
+  if (!master?.length || c.length < 2) return null;
+  let best = null;
+  for (const h of master) if (h.code && c.startsWith(h.code) && (!best || h.code.length > best.code.length)) best = h;
+  return best;
 }
 
 /** <option> elements for a lookup list, keeping an unknown current value selectable. */

@@ -696,7 +696,13 @@ function CreateInvoiceModal({ onClose, onCreated, onView, onEmail, inventoryItem
   const setF       = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const addItem    = () => setItems(p => [...p, newItem(lk)]);
   const removeItem = i => setItems(p => p.filter((_, j) => j !== i));
-  const setItem    = (i, k, v) => setItems(p => p.map((it, j) => j === i ? { ...it, [k]: v } : it));
+  // Typing an HSN that is in the HSN master fills its GST rate (the server bills at that rate too)
+  const setItem    = (i, k, v) => setItems(p => p.map((it, j) => {
+    if (j !== i) return it;
+    const next = { ...it, [k]: v };
+    if (k === 'hsnCode') { const hit = lk.resolveHsn(v); if (hit) next.gstRate = Number(hit.gstRate); }
+    return next;
+  }));
 
   const pickInventoryItem = (i, invId) => {
     const invItem = inventoryItems.find(inv => inv.id === Number(invId));
@@ -725,7 +731,7 @@ function CreateInvoiceModal({ onClose, onCreated, onView, onEmail, inventoryItem
       variantId:   v.id || null,
       productName: [p.name, v.weight].filter(Boolean).join(' '),
       hsnCode:     p.hsnCode || it.hsnCode,
-      gstRate:     gst,
+      gstRate:     lk.resolveHsn(p.hsnCode || it.hsnCode) ? Number(lk.resolveHsn(p.hsnCode || it.hsnCode).gstRate) : gst,
       unitPrice:   round2(Number(v.price || 0) / (1 + gst / 100)),
       mrpPrice:    Number(v.mrp || v.price || 0),
     }));
@@ -929,6 +935,7 @@ function CreateInvoiceModal({ onClose, onCreated, onView, onEmail, inventoryItem
             <Button size="sm" variant="tertiary" onClick={addItem}><Plus className="size-3.5" /> Add row</Button>
           </div>
           <div className="grid-box overflow-x-auto">
+            <datalist id="bill-hsn-codes">{lk.hsnCodes.map(h => <option key={h.code} value={h.code}>{`${h.gstRate}% — ${h.description}`}</option>)}</datalist>
             <table>
               <thead>
                 <tr>
@@ -994,7 +1001,7 @@ function CreateInvoiceModal({ onClose, onCreated, onView, onEmail, inventoryItem
                           </span>
                         )}
                       </td>
-                      <td className="!px-1.5 !py-1"><input value={it.hsnCode} onChange={e => setItem(i,'hsnCode',e.target.value)} className={`${cellInp} w-16 border-[color:var(--border)]`} /></td>
+                      <td className="!px-1.5 !py-1"><input value={it.hsnCode} onChange={e => setItem(i,'hsnCode',e.target.value)} list="bill-hsn-codes" className={`${cellInp} w-16 border-[color:var(--border)]`} /></td>
                       <td className="!px-1.5 !py-1"><input type="number" min="1" step="1" value={it.quantity} onChange={e => setItem(i,'quantity',e.target.value === '' ? '' : +e.target.value)} className={`${cellInp} w-14 ${bad}`} /></td>
                       <td className="!px-1.5 !py-1">
                         <select value={it.unit} onChange={e => setItem(i,'unit',e.target.value)} className={`${cellInp} w-16 border-[color:var(--border)]`}>
@@ -1005,7 +1012,8 @@ function CreateInvoiceModal({ onClose, onCreated, onView, onEmail, inventoryItem
                       <td className="!px-1.5 !py-1"><input type="number" min="0" step="0.01" value={it.mrpPrice} onChange={e => setItem(i,'mrpPrice',e.target.value === '' ? '' : +e.target.value)} className={`${cellInp} w-16 border-[color:var(--border)]`} /></td>
                       <td className="!px-1.5 !py-1"><input type="number" min="0" max="100" value={it.discountPercent} onChange={e => setItem(i,'discountPercent',+e.target.value)} className={`${cellInp} w-14 border-[color:var(--border)]`} /></td>
                       <td className="!px-1.5 !py-1">
-                        <select value={it.gstRate} onChange={e => setItem(i,'gstRate',+e.target.value)} className={`${cellInp} w-16 border-[color:var(--border)]`}>
+                        <select value={it.gstRate} onChange={e => setItem(i,'gstRate',+e.target.value)} disabled={!!lk.resolveHsn(it.hsnCode)}
+                          title={lk.resolveHsn(it.hsnCode) ? `GST from HSN master ${lk.resolveHsn(it.hsnCode).code}` : 'GST rate'} className={`${cellInp} w-16 border-[color:var(--border)]`}>
                           {lookupOptions(lk.list('GstSlab'), String(it.gstRate)).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                         </select>
                       </td>
