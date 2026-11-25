@@ -171,7 +171,10 @@ export default function CompanyExpenses() {
                           </>
                         ) : e.canApprove ? (
                           <>
-                            <Button size="sm" onClick={() => approve(e)} loading={approving === e.id}><CheckCircle2 className="size-3.5" /> Approve</Button>
+                            <Button size="sm" variant="secondary" onClick={() => approve(e)} loading={approving === e.id} title="Approve this expense"
+                              className="!h-6 !gap-1 !rounded-full !border-[color:var(--success)] !bg-[color:var(--success-bg)] !px-2.5 !text-[12px] !text-[color:var(--success)] hover:!bg-[color:var(--success)] hover:!text-white [&_svg]:!size-3">
+                              <CheckCircle2 className="size-3" /> Approve
+                            </Button>
                             <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">Added by {e.addedBy || '—'}</div>
                           </>
                         ) : (
