@@ -27,7 +27,15 @@ export default function CompanyPartners() {
   const [logins, setLogins] = useState([]);           // admin logins a partner can be linked to (expense approvals)
   useEffect(() => {
     if (!edit) return;
-    apiGet('/admin/company/partner-logins').then(setLogins).catch(() => setLogins([]));
+    apiGet('/admin/company/partner-logins').then((list) => {
+      setLogins(list);
+      // Not linked yet but the partner's email matches a login → pre-select it (saved only when you press Save)
+      setEdit((cur) => {
+        if (!cur || cur.adminUserId || !cur.email) return cur;
+        const match = list.find((u) => u.email?.toLowerCase() === cur.email.trim().toLowerCase() && (!u.linkedPartnerId || u.linkedPartnerId === cur.id));
+        return match ? { ...cur, adminUserId: String(match.id) } : cur;
+      });
+    }).catch(() => setLogins([]));
   }, [edit?.id, !!edit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLedger = useCallback(async () => {
@@ -227,7 +235,7 @@ export default function CompanyPartners() {
                 </Field>
                 <Field label="Joined on"><input type="date" value={edit.joinedOn} onChange={(e) => setEdit({ ...edit, joinedOn: e.target.value })} className="input-field" /></Field>
               </div>
-              <Field label="Admin login" hint="The partner's own admin-panel account. Partners approve each other's expenses — nobody can approve an expense they added.">
+              <Field label="Admin login" hint="The partner's own admin-panel login (the Super Admin isn't listed — it never approves). Partners approve each other's expenses; nobody approves an expense they added.">
                 <select value={edit.adminUserId} onChange={(e) => setEdit({ ...edit, adminUserId: e.target.value })} className="input-field">
                   <option value="">— Not linked —</option>
                   {logins.map((u) => {
