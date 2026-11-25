@@ -33,11 +33,6 @@ const blankRow = (size) => ({
 export default function ProductEditor({ product, categories, packTypes, onClose, onSaved }) {
   const isEdit = !!product;
   const lk = useLookups();
-  // GST follows the HSN master: a matching HSN code sets (and locks) the rate — the server applies the same rule
-  const hsnHit = lk.resolveHsn(form.hsnCode);
-  useEffect(() => {
-    if (hsnHit && Number(form.gstRate) !== Number(hsnHit.gstRate)) setForm((f) => ({ ...f, gstRate: Number(hsnHit.gstRate) }));
-  }, [hsnHit?.code, hsnHit?.gstRate]); // eslint-disable-line react-hooks/exhaustive-deps
   // Standard pack sizes come from Settings -> Master data -> PackSize (e.g. "100g")
   const packSizeList = lk.list('PackSize');
   const standardSizes = useMemo(
@@ -47,6 +42,11 @@ export default function ProductEditor({ product, categories, packTypes, onClose,
   const badges = lk.list('ProductBadge');
   const gstSlabs = lk.list('GstSlab');
   const [form, setForm] = useState(EMPTY);
+  // GST follows the HSN master: a matching HSN code sets (and locks) the rate — the server applies the same rule
+  const hsnHit = lk.resolveHsn(form.hsnCode);
+  useEffect(() => {
+    if (hsnHit && Number(form.gstRate) !== Number(hsnHit.gstRate)) setForm((f) => ({ ...f, gstRate: Number(hsnHit.gstRate) }));
+  }, [hsnHit?.code, hsnHit?.gstRate]); // eslint-disable-line react-hooks/exhaustive-deps
   const [rows, setRows] = useState([]);
   const [imageUrl, setImageUrl] = useState(null);
   const [file, setFile] = useState(null);
