@@ -7,7 +7,7 @@ import path from 'path';
  * Content-Security-Policy for the production build.
  * Allows exactly what the site uses: own origin, the API (VITE_API_URL), Google Fonts,
  * Razorpay Checkout, Google Sign-In, Google Maps embed (Contact page), any https image
- * (admin-entered images / CDN), and Web Workers from self/blob (proof-of-work solver).
+ * (admin-entered images / CDN), Web Workers from self/blob (proof-of-work solver) and blob: PDF previews in admin.
  * No 'unsafe-eval' and no inline scripts. 'unsafe-inline' is allowed for STYLES only
  * (react-hot-toast / Razorpay inject <style> tags; the page loader uses an inline <style>).
  */
@@ -22,11 +22,13 @@ function buildCsp(apiOrigin, { forHeader = false } = {}) {
     "font-src 'self' data: https://fonts.gstatic.com",
     `img-src 'self' data: blob: https:${api}`,
     `connect-src 'self'${api}${ws} https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com/gsi/`,
-    'frame-src https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com/gsi/ https://www.google.com https://maps.google.com',
+    // blob: = the admin's in-page PDF previews (invoice / credit note / payslip blobs fetched from the API)
+    "frame-src 'self' blob: https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com/gsi/ https://www.google.com https://maps.google.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "media-src 'self' https:",
-    "object-src 'none'",
+    // Chrome's built-in PDF viewer counts as a plugin: only our own blob: PDFs may load in it, nothing else
+    "object-src blob:",
     "base-uri 'self'",
     "form-action 'self' https://api.razorpay.com",
   ];
