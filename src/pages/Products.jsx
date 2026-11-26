@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
+import ComingSoon from '@/components/ui/ComingSoon';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchCategories } from '@/store/slices/productSlice';
 import { SkProductGrid } from '@/components/ui/Skeleton';
@@ -11,6 +12,7 @@ import { normalizeList } from '@/utils/product';
 
 // Products load page by page as the shopper scrolls (infinite scroll); sorting happens on the server
 const PAGE_SIZE = 12;
+const prettySlug = (slug) => slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
 const API_SORT = { 'price-asc': 'price_asc', 'price-desc': 'price_desc', rating: 'rating', name: 'name' };
 
 const sortOptions = [
@@ -47,6 +49,8 @@ export default function Products() {
     () => (activeMain ? categories.filter((c) => c.parentId === activeMain.id).sort(byOrder) : []),
     [categories, activeMain]
   );
+
+  const activeSubCat = activeSub !== 'all' ? subCategories.find((c) => c.slug === activeSub) : null;
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -181,12 +185,12 @@ export default function Products() {
             </div>
           )}
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-gray-500 hidden sm:block">{total} products</span>
+          {(total > 0 || loading) && <div className="ml-auto flex items-center gap-3">
+            {total > 0 && <span className="text-sm text-gray-500 hidden sm:block">{total} products</span>}
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-green/30 bg-white">
               {sortOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
-          </div>
+          </div>}
         </div>
 
         {loading ? (
@@ -197,6 +201,13 @@ export default function Products() {
             <p className="text-gray-500 mb-6">Please check your connection and try again.</p>
             <button onClick={() => loadPage(1)} className="btn-primary">Try again</button>
           </div>
+        ) : sortedProducts.length === 0 && !searchQuery ? (
+          // nothing added yet in this category / sub-category (or the whole store) → coming soon
+          <ComingSoon
+            name={activeSubCat ? activeSubCat.name : activeMain ? activeMain.name : activeCategory !== 'all' ? prettySlug(activeCategory) : undefined}
+            icon={(activeSubCat?.icon || activeMain?.icon) || undefined}
+            onBrowseAll={activeCategory !== 'all' ? () => setCategory('all') : undefined}
+          />
         ) : sortedProducts.length === 0 ? (
           <div className="text-center py-24">
             <div className="text-6xl mb-4">🫙</div>

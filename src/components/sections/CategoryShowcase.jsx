@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import { SkProductGrid } from '@/components/ui/Skeleton';
+import ComingSoon from '@/components/ui/ComingSoon';
 import api from '@/services/api';
 import { normalizeList } from '@/utils/product';
 
@@ -13,12 +14,13 @@ const ROTATE_MS = 8000;
 /**
  * Home "Our Products": cycles through the main categories (Blended Masala → Whole Spices → Ground Spices → …)
  * showing each category's top products (featured first, then best rated). Categories and their order come
- * from the admin (Categories page); empty categories are skipped. Auto-advances every 8 s, pauses while the
+ * from the admin (Categories page); a category with no products yet shows "Coming soon". Auto-advances every 8 s, pauses while the
  * shopper hovers / focuses the section or the tab is hidden, and stops rotating once they pick a tab.
  * Products for a category are fetched once and cached; the next category is prefetched.
  */
 function CategoryShowcase() {
   const [cats, setCats] = useState([]);
+  const [catsLoaded, setCatsLoaded] = useState(false);
   const [active, setActive] = useState(0);
   const [cache, setCache] = useState({});          // slug → { items, total }
   const [paused, setPaused] = useState(false);
@@ -33,9 +35,9 @@ function CategoryShowcase() {
         const list = (res.data?.data || [])
           .filter((c) => !c.parentId && c.isActive !== false)
           .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-        if (alive) setCats(list);
+        if (alive) { setCats(list); setCatsLoaded(true); }
       })
-      .catch(() => { if (alive) setCats([]); });
+      .catch(() => { if (alive) { setCats([]); setCatsLoaded(true); } });
     return () => { alive = false; };
   }, []);
 
@@ -60,18 +62,10 @@ function CategoryShowcase() {
     load(cats[(active + 1) % cats.length]?.slug);
   }, [cats, active, load]);
 
-  // Skip categories that turned out to be empty
-  const visible = useMemo(() => cats.filter((c) => !cache[c.slug] || cache[c.slug].items.length > 0), [cats, cache]);
+  // Every category keeps its tab — one without products shows "Coming soon" in the panel
+  const visible = cats;
   const visibleKey = visible.map((c) => c.slug).join('|');
   const current = cats[active];
-  useEffect(() => {
-    if (!current) return;
-    const entry = cache[current.slug];
-    if (entry && !entry.error && entry.items.length === 0 && visible.length > 0) {
-      const next = cats.findIndex((c, i) => i > active && visible.includes(c));
-      setActive(next >= 0 ? next : cats.indexOf(visible[0]));
-    }
-  }, [cache, current, active, cats, visible]);
 
   useEffect(() => {
     const onVis = () => setHidden(document.hidden);
@@ -95,7 +89,8 @@ function CategoryShowcase() {
   const pick = (i) => { setUserPicked(true); setActive(i); };
   const entry = current ? cache[current.slug] : null;
 
-  if (!cats.length) return <SkProductGrid count={4} cols="grid-cols-2 sm:grid-cols-4" />;
+  if (!catsLoaded) return <SkProductGrid count={4} cols="grid-cols-2 sm:grid-cols-4" />;
+  if (!cats.length) return <ComingSoon compact />;
 
   return (
     <div
@@ -140,6 +135,10 @@ function CategoryShowcase() {
       <div className="min-h-[24rem]" role="tabpanel" aria-label={current?.name}>
         {!entry ? (
           <SkProductGrid count={4} cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" />
+        ) : entry.items.length === 0 && !entry.error ? (
+          <ComingSoon key={current.slug} compact name={current.name} icon={current.icon} showBrowseAll={false} />
+        ) : entry.items.length === 0 ? (
+          <div className="py-16 text-center font-body text-gray-500">Couldn&apos;t load products right now — please try again in a moment.</div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.div

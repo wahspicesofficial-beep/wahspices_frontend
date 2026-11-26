@@ -5,6 +5,7 @@ import { ArrowDown, ArrowRight, ChevronRight, Eye, MapPin, ShoppingBag, Sparkles
 import IndiaMap from '@/components/regions/IndiaMap';
 import RegionCard from '@/components/regions/RegionCard';
 import ProductCard from '@/components/ui/ProductCard';
+import ComingSoon from '@/components/ui/ComingSoon';
 import { fetchRegion, fetchRegions, paragraphs, regionImage, safeColor, tint } from '@/utils/regions';
 import { normalizeList } from '@/utils/product';
 
@@ -357,7 +358,7 @@ export default function Regions() {
                     {products.map((p) => <ProductCard key={p.id} product={p} />)}
                   </div>
                 ) : (
-                  <p className="text-center font-body text-gray-500">Products for this region are coming soon.</p>
+                  <ComingSoon compact name={`${region.name} masalas`} icon={region.icon || '🗺️'} />
                 )}
                 <div className="mt-8 text-center">
                   <Link to="/products" className="inline-flex items-center gap-2 font-body font-bold text-brand-green hover:gap-3 transition-all">Browse all products <ArrowRight className="h-4 w-4" /></Link>
